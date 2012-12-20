@@ -1,39 +1,33 @@
 var Cyberzone = require('./src/cyberzone.js');
 
+var main_channel = '#gridhack';
+
 var irc = require('irc');
 var irc_client = new irc.Client('irc.mountai.net', 'admin', {
-  channels: ['#gridhack'],
+  channels: [main_channel],
   userName: 'admin',
   realName: 'Administrator',
   stripColors: true,
   debug: true
 });
+irc_client.invite = function(channel, nick){
+  irc_client.send("INVITE", nick, channel);
+};
 
 var redis = require('redis');
 var redis_client = redis.createClient();
 var redis_keyspace = "cyberzone:irc:";
 
-irc_client.addListener('message', function (from, to, message) {
-  console.log(from + ' => ' + to + ': ' + message);
+var timers = require('timers');
 
-  var matches = message.match(/^!(\S+)(.*)/);
-  var command, args;
-  if (matches) {
-    command = matches[1];
-    args = matches[2].trim().split(" ");
-  }
+irc_client.addListener('message' + main_channel, function (from, to, text) {
+  console.log(from + ' => ' + to + ': ' + text);
 
-  if(typeof(commands[command]) === "function"){
-    try{
-      commands[command](from, to, args);
-    }catch(err){
-      console.log(err);
-    }
-  }
+  run_command(from, to, text, main_commands);
 });
 
 irc_client.addListener('error', function(message) {
-  console.log('error: ', message);
+  // console.log('error: ', message);
 });
 
 irc_client.addListener('ping', function(server) {
@@ -41,18 +35,94 @@ irc_client.addListener('ping', function(server) {
 });
 
 irc_client.addListener('names', function(channel, nicks) {
-  console.log(nicks);
+  // console.log(nicks);
 });
 
-var commands = {};
-commands.upload = function(from, to, args){
-  redis_client.get(redis_keyspace + "recruiting_game", function(err, id){
+var game_channel_listener = function (from, to, text) {
+  console.log(from + ' => ' + to + ': ' + text);
+
+  run_command(from, to, text, game_commands);
+};
+
+var main_commands = {};
+var game_commands = {};
+
+var recruiting_game_keyspace = redis_keyspace + "recruiting_game";
+var players_keyspace = recruiting_game_keyspace + ":players";
+var active_games_keyspace = redis_keyspace + "active_games";
+
+main_commands.upload = function(from, to, args){
+  redis_client.get(recruiting_game_keyspace, function(err, id){
     if (id === null) {
-      id = new Date().getTime();
-      redis_client.set(redis_keyspace + "recruiting_game", id);
-      redis_client.sadd(redis_keyspace + "active_games", id);
+      id = "#" + new Date().getTime();
+      redis_client.set(recruiting_game_keyspace, id);
+      redis_client.sadd(active_games_keyspace, id);
+
+      irc_client.join(id, function(){
+        irc_client.send("MODE", id, "+i");
+        irc_client.say(main_channel, "uploading...");
+        main_commands.jack(from, to, args);
+
+        // kills the active game if it's taking too long to set up
+        // timers.setTimeout(function(){
+        //   main_commands.cancel();
+        // }, 10 * 1000);
+
+        irc_client.addListener('message' + id, game_channel_listener);
+      });
     } else {
-      irc_client.say('#gridhack', "recruiting already in progress");
+      irc_client.say(main_channel, "already uploading");
     }
   });
 };
+
+main_commands.cancel = function(from, to, args){
+  redis_client.get(recruiting_game_keyspace, function(err, id){
+    if (id === null) {
+      irc_client.say(main_channel, "no upload to cancel");
+    } else {
+      redis_client.del(recruiting_game_keyspace);
+      redis_client.del(players_keyspace);
+      redis_client.srem(active_games_keyspace, id);
+
+      irc_client.part(id);
+      irc_client.say(main_channel, "cancelled upload");
+    }
+  });
+};
+
+main_commands.jack = function(from, to, args){
+  redis_client.get(recruiting_game_keyspace, function(err, id){
+    if (id === null) {
+      irc_client.say(main_channel, "there is no game currently uploading");
+    } else {
+      redis_client.sismember(players_keyspace, from, function(err, is_member){
+        if(is_member){
+          irc_client.say(main_channel, "you're already part of the matrix");
+        } else {
+          redis_client.sadd(players_keyspace, from);
+          irc_client.invite(id, from);
+          irc_client.say(main_channel, "jacking " + from + " into the matrix");
+        }
+      });
+    }
+  });
+};
+
+
+function run_command(from, to, text, command_list) {
+  var matches = text.match(/^!(\S+)(.*)/);
+  var command, args;
+  if (matches) {
+    command = matches[1];
+    args = matches[2].trim().split(" ");
+  }
+
+  if(typeof(command_list[command]) === "function"){
+    try{
+      command_list[command](from, to, args);
+    }catch(err){
+      console.log(err);
+    }
+  }
+}
