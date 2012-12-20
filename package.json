@@ -2,7 +2,7 @@
   "name": "gridhack",
   "version": "0.0.1",
   "dependencies": {
-    "irc": "0.3.3",
+    "irc": "git://github.com/TannerRogalsky/node-irc.git#b2a1df9da98f6e7df6253f466c09eff8f156521b",
     "redis": "0.8.1",
     "hiredis": "0.1.14"
   }
