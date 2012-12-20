@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "dependencies": {
     "irc": "0.3.3",
-    "redis": "0.8.1"
+    "redis": "0.8.1",
+    "hiredis": "0.1.14"
   }
 }
