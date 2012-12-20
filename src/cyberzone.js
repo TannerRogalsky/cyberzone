@@ -1,14 +1,15 @@
 module.exports = Cyberzone;
 
-var Grid = require('./src/grid.js');
+var Grid = require('./grid.js');
 
 function Cyberzone(options) {
-  var self = this;
-  self.options = {
-    num_players: 2
+  this.options = {
+    num_players: 1,
+    columns: 2,
+    rows: 2
   };
-  for (var option in options) { self.options[option] = options[option]; }
+  for (var option in options) { this.options[option] = options[option]; }
 
-  this.grid = new Grid(10, 10);
+  this.grid = new Grid(this.options.rows, this.options.columns);
   this.grid.populate_grid();
 }

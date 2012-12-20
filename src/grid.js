@@ -1,6 +1,8 @@
 module.exports = Grid;
 
 var Tile = require('./tile.js');
+var Player = require('./player.js');
+var Item = require('./item.js');
 
 function Grid(rows, columns) {
   this.rows = rows;
@@ -9,14 +11,19 @@ function Grid(rows, columns) {
   for (var i = 0; i < rows; i++) {
     this._grid[i] = new Array(columns);
     for (var j = 0; j < this._grid[i].length; j++) {
-      this._grid[i][j] = new Tile();
+      this._grid[i][j] = new Tile(i, j);
     }
   }
 }
 
 Grid.prototype.populate_grid = function() {
-  this.iterate(function(){
-    this.push(0);
+  var self = this;
+  self.iterate(function(){
+    if (Math.random() > 0.5) {
+      this.player = new Player(this.row, this.column);
+    } else {
+      this.item = new Item(this.row, this.column);
+    }
   });
 };
 

@@ -1,9 +1,10 @@
 module.exports = Tile;
 
-function Tile() {
-  this.contents = [];
-}
+function Tile(row, column) {
+  this.player = false;
+  this.item = false;
+  this.hole = false;
 
-Tile.prototype.push = function(item) {
-  this.contents.push(item);
-};
+  this.row = row;
+  this.column = column;
+}
