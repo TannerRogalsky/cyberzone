@@ -140,15 +140,31 @@ game_commands.bootstrap = function(from, to, args){
       irc_client.say(main_channel, "there is no game currently uploading");
     } else if (id === to) {
       irc_client.say(id, "game actuating... please wait...");
+      redis_client.hgetall(redis_keyspace + to + ":config", function(err, config){
+        redis_client.smembers(players_keyspace, function(err, players){
+          config.players = players;
+          var game = new Cyberzone(config);
+          redis_client.hmset(redis_keyspace + id, game.to_json());
+
+          redis_client.del(recruiting_game_keyspace);
+          redis_client.del(players_keyspace);
+        });
+      });
       irc_client.say(main_channel, "a memory location is now locked. you may now start a new hack.");
-      redis_client.del(recruiting_game_keyspace);
-      redis_client.del(players_keyspace);
     } else {
       irc_client.say(main_channel, "you can only start the game from the inside");
     }
   });
 };
 main_commands.bootstrap = game_commands.bootstrap;
+
+game_commands.config = function(from, to, args){
+  var key = args[0];
+  var value = args[1];
+
+  redis_client.hset(redis_keyspace + to + ":config", key, value);
+  irc_client.say(to, "saved: " + key + " => " + value);
+};
 
 game_commands.exit = function(from, to, args){
   redis_client.srem(active_games_keyspace, to);
