@@ -2,14 +2,16 @@ module.exports = Cyberzone;
 
 var Grid = require('./grid.js');
 
-function Cyberzone(options) {
-  this.options = {
-    num_players: 1,
-    columns: 2,
-    rows: 2
-  };
-  for (var option in options) { this.options[option] = options[option]; }
+function Cyberzone(config) {
+  this.num_players =  config.players.length;
+  this.columns =  2;
+  this.rows =  2;
 
-  this.grid = new Grid(this.options.rows, this.options.columns);
-  this.grid.populate_grid();
+  for (var option in config) { this[option] = config[option]; }
+
+  this.grid = new Grid(this.grid);
 }
+
+Cyberzone.prototype.to_json = function(){
+  return {};
+};
