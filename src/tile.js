@@ -1,10 +1,23 @@
 module.exports = Tile;
 
-function Tile(row, column) {
+function Tile(config) {
+  this.type = "tile";
+
   this.player = false;
   this.item = false;
   this.hole = false;
 
-  this.row = row;
-  this.column = column;
+  for (var option in config) { this[option] = config[option]; }
 }
+
+Tile.prototype.to_json = function(){
+  var json = {};
+  for (var key in this){
+    if(type(this[key].to_json) === "function"){
+      json[key] = this[key].to_json();
+    } else {
+      json[key] = this[key];
+    }
+  }
+  return json;
+};

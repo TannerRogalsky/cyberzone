@@ -1,7 +1,12 @@
 module.exports = Item;
 
-function Item(row, column) {
-  this.row = row;
-  this.column = column;
+function Item(config) {
+  this.type = "item";
+
+  this.row = config.row;
+  this.column = config.column;
 }
 
+Item.prototype.to_json = function(){
+  return this;
+};
